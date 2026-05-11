@@ -1,6 +1,6 @@
 import { request, response } from "express";
-
-let users: { id: number; username: string }[] = [];
+import User from "@/models/users";
+import { isValidObjectId } from "mongoose";
 
 export const getHello = (req: typeof request, res: typeof response) => {
   const username = req.query.username;
@@ -12,38 +12,52 @@ export const getHello = (req: typeof request, res: typeof response) => {
   res.send(`Hello, ${username}!`);
 };
 
-export const createUser = (req: typeof request, res: typeof response) => {
+export const createUser = async (req: typeof request, res: typeof response) => {
   const username: string = req.body.username;
-  const id: number = users.length + 1;
+  const isAuthor: boolean = req.body.isAuthor;
+  const password: string = req.body.password;
 
-  if (users.find((user) => user.username == username)) {
+  if (await User.findOne({ username })) {
     return res.status(400).send("Username already exists");
   }
-  if (!username) {
-    return res.status(400).send("Username body parameter is required");
+  if (!username || !password) {
+    return res.status(400).send("Required Details Missing");
   }
-
-  users.push({ id, username });
-  res.status(201).send(`User created with ID: ${id}`);
+  try {
+    const user = await User.create({ username, isAuthor, password });
+    res.status(201).send(`User created: ${user}`);
+  } catch (err) {
+    res.status(500).send("Error creating user: " + err);
+  }
 };
 
-export const getUserById = (req: typeof request, res: typeof response) => {
+export const getUserById = async (
+  req: typeof request,
+  res: typeof response,
+) => {
   const id = req.params.id;
-  const user = users.find((user) => user.id === parseInt(id as string));
+  if (!isValidObjectId(id)) {
+    return res.status(400).send("invalid id");
+  }
+  const user = await User.findById(id).select('-password');
   if (!user) {
     return res.status(404).send("user not found");
   }
 
-  //   users.push({ id, username });
-  res.status(201).send(`User Found with ID: ${JSON.stringify(user)}`);
+  res.status(201).send(`User Found with ID: ${user}`);
 };
 
-export const getUsers = (req: typeof request, res: typeof response) => {
-  const user = JSON.stringify(users);
-  //   if (!user) {
-  //     return res.status(404).send("user not found");
-  //   }
+export const getUsers = async (req: typeof request, res: typeof response) => {
+  const user = await User.find().select("-password");
 
-  //   users.push({ id, username });
   res.status(201).send(`Users Found: ${user}`);
+};
+
+export const deleteUsers = async (
+  req: typeof request,
+  res: typeof response,
+) => {
+  const user = await User.deleteMany();
+
+  res.status(201).send(`Users Deleted: ${JSON.stringify(user)}`);
 };

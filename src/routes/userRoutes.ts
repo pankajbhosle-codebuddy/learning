@@ -1,16 +1,16 @@
 import { Router } from "express";
 import {
-  getHello,
-  createUser,
   getUserById,
   getUsers,
+  deleteUsers,
 } from "../controllers/userController";
+import { protect } from "@/middlewares/auth";
+import { isAuthor } from "@/middlewares/author";
 
 const router = Router();
 
-router.get("/hello", getHello);
-router.post("/users", createUser);
-router.get("/users", getUsers);
-router.get("/users/:id", getUserById);
+router.get("/", getUsers);
+router.delete("/", isAuthor, deleteUsers);
+router.get("/:id", getUserById);
 
 export default router;
