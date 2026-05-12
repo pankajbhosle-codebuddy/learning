@@ -1,5 +1,6 @@
+import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/utils/password";
 import { request, response } from "express";
-import User from "@/models/users";
 import { isValidObjectId } from "mongoose";
 
 export const getHello = (req: typeof request, res: typeof response) => {
@@ -14,20 +15,23 @@ export const getHello = (req: typeof request, res: typeof response) => {
 
 export const createUser = async (req: typeof request, res: typeof response) => {
   const username: string = req.body.username;
-  const isAuthor: boolean = req.body.isAuthor;
+  const isAuthor: boolean = req.body.isAuthor || false;
   const password: string = req.body.password;
 
-  if (await User.findOne({ username })) {
-    return res.status(400).send("Username already exists");
+  if (await prisma.users.findFirst({ where: { username } })) {
+    return res.status(400).json({ error: "Username already exists" });
   }
   if (!username || !password) {
-    return res.status(400).send("Required Details Missing");
+    return res.status(400).json({ error: "Required Details Missing" });
   }
   try {
-    const user = await User.create({ username, isAuthor, password });
-    res.status(201).send(`User created: ${user}`);
+    const hashedPassword = await hashPassword(password);
+    const user = await prisma.users.create({
+      data: { username, isAuthor, password: hashedPassword },
+    });
+    res.status(201).json({ message: `users created:`, data: user });
   } catch (err) {
-    res.status(500).send("Error creating user: " + err);
+    res.status(500).json({ error: "Error creating user: " + err });
   }
 };
 
@@ -35,29 +39,34 @@ export const getUserById = async (
   req: typeof request,
   res: typeof response,
 ) => {
-  const id = req.params.id;
+  const id = req.params.id as string;
   if (!isValidObjectId(id)) {
-    return res.status(400).send("invalid id");
+    return res.status(400).json({ error: "invalid id" });
   }
-  const user = await User.findById(id).select('-password');
+  const user = await prisma.users.findFirst({
+    where: { id },
+    select: { password: false, id: true, username: true, isAuthor: true },
+  });
   if (!user) {
-    return res.status(404).send("user not found");
+    return res.status(404).json({ error: "user not found" });
   }
 
-  res.status(201).send(`User Found with ID: ${user}`);
+  res.status(201).json({ message: `users Found with ID: ${user}`, data: user });
 };
 
 export const getUsers = async (req: typeof request, res: typeof response) => {
-  const user = await User.find().select("-password");
+  const user = await prisma.users.findMany({
+    select: { password: false, id: true, username: true, isAuthor: true },
+  });
 
-  res.status(201).send(`Users Found: ${user}`);
+  res.status(201).json({ message: `Users Found: ${user.length}`, data: user });
 };
 
 export const deleteUsers = async (
   req: typeof request,
   res: typeof response,
 ) => {
-  const user = await User.deleteMany();
+  const user = await prisma.users.deleteMany();
 
-  res.status(201).send(`Users Deleted: ${JSON.stringify(user)}`);
+  res.status(201).json({ message: `Users Deleted: ${user.count}` });
 };

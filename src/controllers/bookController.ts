@@ -1,44 +1,31 @@
+import { prisma } from "@/lib/prisma";
 import { AuthRequest } from "@/middlewares/auth";
-import Book from "@/models/books";
+// import Book from "@/models/books";
 import { Response } from "express";
 
 export const getBooks = async (req: AuthRequest, res: Response) => {
   try {
-    const books = await Book.aggregate([
-      {
-        $lookup: {
-          from: "users",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
-        },
-      },
-      // {$unwind: "$author"},
-      {
-        $lookup: {
-          from: "genres",
-          localField: "genres",
-          foreignField: "_id",
-          as: "genres",
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          author: {
-            // $arrayElemAt: ["$author", 0]
-            username: 1,
+    const books = await prisma.books.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        createdAt: true,
+
+        author: {
+          select: {
+            username: true,
           },
-          genres: {
-            name: 1,
+        },
+
+        genres: {
+          select: {
+            name: true,
           },
         },
       },
-    ]);
-    //   .populate(
-    //   "author", "username"
-    // ).populate("genres", "name");
+    });
+    
     res.status(200).json({ message: `Books Found:`, data: books });
   } catch (error) {
     res.status(500).send("Server error" + error);
@@ -48,21 +35,47 @@ export const getBooks = async (req: AuthRequest, res: Response) => {
 export const createBook = async (req: AuthRequest, res: Response) => {
   try {
     const author = req.user;
+
     if (!author.isAuthor) {
-      req.user.isAuthor = true;
-      await req.user.save();
+      await prisma.users.update({
+        where: {
+          id: author.id,
+        },
+        data: {
+          isAuthor: true,
+        },
+      });
     }
+
     if (!req.body.title || !req.body.genres || !req.body.description) {
       return res.status(400).send("Required Details Missing");
     }
-    const books = await Book.create({
-      title: req.body.title,
-      author: author._id,
-      genres: req.body.genres,
-      description: req.body.description,
+
+    const book = await prisma.books.create({
+      data: {
+        title: req.body.title,
+        description: req.body.description,
+
+        author: {
+          connect: {
+            id: author.id,
+          },
+        },
+
+        genres: {
+          connect: req.body.genres.map((id: string) => ({
+            id,
+          })),
+        },
+      },
     });
-    res.status(200).send(`Book Created: ${books}`);
+
+    res.status(200).json({
+      message: "Book Created",
+      book,
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).send("Server error");
   }
 };
@@ -71,15 +84,23 @@ export const deleteBookById = async (req: AuthRequest, res: Response) => {
   try {
     const currUser = req.user;
     console.log("req.params.id", req.params.id);
-    const book = await Book.findById(req.params.id);
+    const book = await prisma.books.findUnique({
+      where: {
+        id: req.params.id as string,
+      },
+    });
     if (!book) {
       return res.status(404).send("Book not found");
     }
 
-    if (book.author.toString() !== currUser._id.toString()) {
+    if (book.authorId !== currUser.id) {
       return res.status(403).send("You are not the owner of this book");
     }
-    await Book.findByIdAndDelete(req.params.id);
+    await prisma.books.delete({
+      where: {
+        id: req.params.id as string,
+      },
+    });
     res.status(200).send(`Book Deleted: ${book.title}`);
   } catch (error) {
     res.status(500).send("Server error");
@@ -92,65 +113,82 @@ export const findBookByNames = async (req: AuthRequest, res: Response) => {
     const genreName = req.query.genre as string;
     let whereClause: any = {};
 
-    if (authorName && genreName) {
-      whereClause = {
-        $and: [{ "author.username": authorName }, { "genres.name": genreName }],
-      };
-    } else if (authorName || genreName) {
-      whereClause = {
-        $or: [{ "author.username": authorName }, { "genres.name": genreName }],
-      };
-    }
+   if (authorName && genreName) {
+     whereClause = {
+       AND: [
+         {
+           author: {
+             username: authorName,
+           },
+         },
+         {
+           genres: {
+             some: {
+               name: genreName,
+             },
+           },
+         },
+       ],
+     };
+   } else if (authorName || genreName) {
+     whereClause = {
+       OR: [
+         {
+           author: {
+             username: authorName,
+           },
+         },
+         {
+           genres: {
+             some: {
+               name: genreName,
+             },
+           },
+         },
+       ],
+     };
+   }
 
-    const book = await Book.aggregate([
-      {
-        $lookup: {
-          from: "users",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
+  const book = await prisma.books.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      createdAt: true,
+
+      author: {
+        select: {
+          username: true,
         },
       },
-      { $unwind: "$author" },
-      {
-        $lookup: {
-          from: "genres",
-          localField: "genres",
-          foreignField: "_id",
-          as: "genres",
+
+      genres: {
+        select: {
+          name: true,
         },
       },
 
-      {
-        $facet: {
-          totalBooks: [{ $count: "count" }],
-          books: [
-            {
-              $match: whereClause,
-            },
-            {
-              $project: {
-                title: 1,
-                description: 1,
-                author: {
-                  username: 1,
-                },
-                genres: {
-                  name: 1,
-                },
-              },
-            },
-          ],
+      _count: {
+        select: {
+          genres: true,
         },
       },
-    ]);
+    },
+  });
 
-    if (!book.length) {
-      return res.status(404).send("Book not found");
-    }
+  if (!book || book.length === 0) {
+    return res.status(404).send("Book not found");
+  }
 
-    res.status(200).json({ message: `Book Found:`, data: book });
+  const totalBooks = await prisma.books.count();
+
+  return res.status(200).json({
+    totalBooks,
+    book,
+  });
   } catch (error) {
+    console.log('error', error)
     res.status(500).send("Server error");
   }
 };

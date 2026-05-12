@@ -1,74 +1,71 @@
+import { prisma } from "@/lib/prisma";
 import { AuthRequest } from "@/middlewares/auth";
-import Book from "@/models/books";
-import Genre from "@/models/genre";
 import { Response } from "express";
-import mongoose from "mongoose";
 
 export const getGenres = async (req: AuthRequest, res: Response) => {
   try {
-    const genres = await Genre.find();
-    res.status(200).send(`Genres Found: ${genres}`);
+    const genres = await prisma.genres.findMany();
+    res
+      .status(200)
+      .json({ message: `Genres Found: ${genres.length}`, data: genres });
   } catch (error) {
-    res.status(500).send("Server error");
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 export const createGenre = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.body.name) {
-      return res.status(400).send("Required Details Missing");
+      return res.status(400).json({ error: "Required Details Missing" });
     }
-    if (await Genre.findOne({name:req.body.name})) {
-      return res.status(400).send("Genre Already Exists!");
+    if (await prisma.genres.findUnique({ where: { name: req.body.name } })) {
+      return res.status(400).json({ error: "Genre Already Exists!" });
     }
-    const genres = await Genre.create({ name: req.body.name });
-    res.status(200).send(`Genre Created: ${genres}`);
+    const genres = await prisma.genres.create({
+      data: { name: req.body.name },
+    });
+    res
+      .status(200)
+      .json({ message: `Genre Created: ${genres.name}`, data: genres });
   } catch (error) {
-    res.status(500).send("Server error");
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 export const getBooksByGenre = async (req: AuthRequest, res: Response) => {
-    try {
-      
-    const books = await Book.aggregate([
-      {
-        $match: {
-          genres: new mongoose.Types.ObjectId(req.params.genreId as string),
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
-        },
-      },
-      {
-        $lookup: {
-          from: "genres",
-          localField: "genres",
-          foreignField: "_id",
-          as: "genres",
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          author: {
-            username: 1,
-          },
-          genres: {
-            name: 1,
+  try {
+    const books = await prisma.books.findMany({
+      where: {
+        genres: {
+          some: {
+            id: req.params.genreId as string,
           },
         },
       },
-    ]);
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        createdAt: true,
 
-    res.status(200).json({ message: `Books Found:`, data: books });
+        author: {
+          select: {
+            username: true,
+          },
+        },
+
+        genres: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    res
+      .status(200)
+      .json({ message: `Books Found: ${books.length}`, data: books });
   } catch (error) {
-    res.status(500).send("Server error" + error);
+    console.log("error", error);
+    res.status(500).json({ error: "Server error" });
   }
 };

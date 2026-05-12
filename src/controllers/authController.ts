@@ -1,38 +1,52 @@
-import User from "@/models/users";
-import Token from "@/models/authToken";
 import { request, response } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcrypt";
+import { comparePassword } from "@/utils/password";
 
 export const login = async (req: typeof request, res: typeof response) => {
   const username = req.body.username;
 
-  const user = await User.findOne({ username: username as string });
+  // const user = await User.findOne({ username: username as string });
+  const user = await prisma.users.findFirst({
+    where: {
+      username: username as string,
+    },
+  });
 
   if (!user) {
     return res.status(404).send("User not found");
   }
 
-  const compare = await user.comparePassword(req.body.password);
+  const compare = await comparePassword(req.body.password, user.password);
 
   if (compare) {
-    let token = await Token.findOne({
-      user: user._id,
-      expiresIn: { $gt: Date.now() },
+    let token = await prisma.tokens.findFirst({
+      where: {
+        userId: user.id,
+        expiresIn: { gt: new Date() },
+      },
     });
     if (token && token !== null) {
-      return res.status(200).send("logged in: " + token);
+      return res.status(200).json({ message: "logged in", data: token });
     }
-    const newtoken = generateToken(user._id.toString(), user.isAuthor);
-    token = await Token.create({
-      token: newtoken,
-      expiresIn:
-        Date.now() + Number(process.env.JWT_EXPIRES_IN as string) * 60 * 1000,
-      user: user._id,
+    const newtoken = generateToken(user.id, user.isAuthor);
+    token = await prisma.tokens.create({
+      data: {
+        token: newtoken,
+        expiresIn: new Date(
+          Date.now() + Number(process.env.JWT_EXPIRES_IN as string) * 60 * 1000,
+        ),
+        userId: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        v: 0,
+      },
     });
-    console.log("newtoken", newtoken);
-    res.status(200).send("logged in: " + token);
+    // console.log("newtoken", newtoken);
+    res.status(200).json({ message: "logged in", data: token });
   } else {
-    res.status(400).send("invalid credentials");
+    res.status(400).json({ message: "invalid credentials" });
   }
 };
 
