@@ -12,7 +12,7 @@ const bookSchema = new Schema(
     },
     author: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Author",
       required: true,
     },
     genres: [

@@ -1,49 +1,46 @@
-import { AuthRequest } from "@/middlewares/auth";
-import Book from "@/models/books";
-import { Response } from "express";
-import mongoose from "mongoose";
+import { Request, Response } from "express";
+import Author from "@/models/author";
+import mongoose, { isValidObjectId } from "mongoose";
+import books from "@/models/books";
+import author from "@/models/author";
+
+export const createAuthor = async (req: Request, res: Response) => {
+  const username: string = req.body.username;
 
 
-export const getBooksByAuthor = async (req: AuthRequest, res: Response) => {
-    try {
-      
-    const books = await Book.aggregate([
+  if (await Author.findOne({ username })) {
+    return res.status(400).send("Username already exists");
+  }
+  if (!username ) {
+    return res.status(400).send("Required Details Missing");
+  }
+  try {
+    const author = await Author.create({ username});
+    res.status(201).send(`Author created: ${author._id}`);
+  } catch (err) {
+    res.status(500).send("Error creating author: " + err);
+  }
+};
+
+export const getBooksByAuthor = async (req: Request, res: Response) => {
+  try {
+    const AllBooks = await author.aggregate([
       {
         $match: {
-          author:new mongoose.Types.ObjectId(req.params.authorId as string),
+          _id: new mongoose.Types.ObjectId(req.params.authorId as string),
         },
       },
       {
         $lookup: {
-          from: "users",
-          localField: "author",
+          from: "books",
+          localField: "books",
           foreignField: "_id",
-          as: "author",
-        },
-      },
-      {
-        $lookup: {
-          from: "genres",
-          localField: "genres",
-          foreignField: "_id",
-          as: "genres",
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          author: {
-            username: 1,
-          },
-          genres: {
-            name: 1,
-          },
+          as: "books",
         },
       },
     ]);
 
-    res.status(200).json({ message: `Books Found:`, data: books });
+    res.status(200).json({ message: `Books Found:`, data: AllBooks });
   } catch (error) {
     res.status(500).send("Server error" + error);
   }

@@ -1,15 +1,18 @@
-FROM node:20
+FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+
+RUN pnpm install
 
 COPY . .
 
-RUN npm run build
+RUN pnpm run build
 
-EXPOSE 3000
+EXPOSE 7777
 
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]

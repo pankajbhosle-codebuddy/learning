@@ -2,24 +2,33 @@ services:
   app:
     build: .
     ports:
-      - "4000:4000"
+      - "7777:7777"
 
     depends_on:
       - mongo
 
     environment:
-      MONGO_URI: mongodb://mongo:27017/mydb
+      PORT: 7777
+      MONGO_URI: mongodb://appuser:password123@mongo:27017/test?authSource=test
+      JWT_SECRET: codebuddy
+      JWT_EXPIRES_IN: "60"
 
     volumes:
       - .:/app
       - /app/node_modules
-    command: npm run dev
+    command: pnpm dev
 
   mongo:
     image: mongo
 
     ports:
       - "27017:27017"
+
+    command: ["mongod", "--auth", "--bind_ip_all"]
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
 
     volumes:
       - mongo-data:/data/db

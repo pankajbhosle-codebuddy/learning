@@ -1,19 +1,10 @@
-import { AuthRequest } from "@/middlewares/auth";
 import Book from "@/models/books";
 import Genre from "@/models/genre";
-import { Response } from "express";
+import { Request, Response } from "express";
 import mongoose from "mongoose";
 
-export const getGenres = async (req: AuthRequest, res: Response) => {
-  try {
-    const genres = await Genre.find();
-    res.status(200).send(`Genres Found: ${genres}`);
-  } catch (error) {
-    res.status(500).send("Server error");
-  }
-};
 
-export const createGenre = async (req: AuthRequest, res: Response) => {
+export const createGenre = async (req: Request, res: Response) => {
   try {
     if (!req.body.name) {
       return res.status(400).send("Required Details Missing");
@@ -28,43 +19,43 @@ export const createGenre = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getBooksByGenre = async (req: AuthRequest, res: Response) => {
+export const getBooksByGenre = async (req: Request, res: Response) => {
     try {
       
-    const books = await Book.aggregate([
+    const books = await Genre.aggregate([
       {
         $match: {
-          genres: new mongoose.Types.ObjectId(req.params.genreId as string),
+          _id: new mongoose.Types.ObjectId(req.params.genreId as string),
         },
       },
+      // {
+      //   $lookup: {
+      //     from: "users",
+      //     localField: "author",
+      //     foreignField: "_id",
+      //     as: "author",
+      //   },
+      // },
       {
         $lookup: {
-          from: "users",
-          localField: "author",
+          from: "books",
+          localField: "books",
           foreignField: "_id",
-          as: "author",
+          as: "books",
         },
       },
-      {
-        $lookup: {
-          from: "genres",
-          localField: "genres",
-          foreignField: "_id",
-          as: "genres",
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          author: {
-            username: 1,
-          },
-          genres: {
-            name: 1,
-          },
-        },
-      },
+      // {
+      //   $project: {
+      //     title: 1,
+      //     description: 1,
+      //     author: {
+      //       username: 1,
+      //     },
+      //     genres: {
+      //       name: 1,
+      //     },
+      //   },
+      // },
     ]);
 
     res.status(200).json({ message: `Books Found:`, data: books });
