@@ -1,19 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { AuthRequest } from "@/middlewares/auth";
-import { Response } from "express";
+import { Request, Response } from "express";
 
-export const getGenres = async (req: AuthRequest, res: Response) => {
-  try {
-    const genres = await prisma.genres.findMany();
-    res
-      .status(200)
-      .json({ message: `Genres Found: ${genres.length}`, data: genres });
-  } catch (error) {
-    res.status(500).json({ error: "Server error" });
-  }
-};
 
-export const createGenre = async (req: AuthRequest, res: Response) => {
+export const createGenre = async (req: Request, res: Response) => {
   try {
     if (!req.body.name) {
       return res.status(400).json({ error: "Required Details Missing" });
@@ -32,7 +21,7 @@ export const createGenre = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getBooksByGenre = async (req: AuthRequest, res: Response) => {
+export const getBooksByGenre = async (req: Request, res: Response) => {
   try {
     const books = await prisma.books.findMany({
       where: {

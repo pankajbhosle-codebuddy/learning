@@ -1,11 +1,38 @@
-import { AuthRequest } from "@/middlewares/auth";
-import Book from "@/models/books";
+
 import { prisma } from "@/lib/prisma";
 
-import { Response } from "express";
-import mongoose from "mongoose";
+import { Request, Response } from "express";
 
-export const getBooksByAuthor = async (req: AuthRequest, res: Response) => {
+export const createAuthor = async (req: Request, res: Response) => {
+  const username: string = req.body.username;
+
+  const isExistsingAuthor = await prisma.author.findUnique({
+    where: {
+      username,
+    },
+  });
+  if (isExistsingAuthor) {
+    return res.status(400).send("Author already exists");
+  }
+  if (!username) {
+    return res.status(400).send("Username is required");
+  }
+
+  try {
+    const author = await prisma.author.create({
+      data: {
+        username,
+      },
+    });
+
+    res.status(200).json({ message: "Author created successfully", data: author });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" + error });
+  }
+
+
+}
+export const getBooksByAuthor = async (req: Request, res: Response) => {
   try {
     const books = await prisma.books.findMany({
       where: {
@@ -29,38 +56,9 @@ export const getBooksByAuthor = async (req: AuthRequest, res: Response) => {
         },
       },
     });
-    // {
-    //   $lookup: {
-    //     from: "users",
-    //     localField: "author",
-    //     foreignField: "_id",
-    //     as: "author",
-    //   },
-    // },
-    // {
-    //   $lookup: {
-    //     from: "genres",
-    //     localField: "genres",
-    //     foreignField: "_id",
-    //     as: "genres",
-    //   },
-    // },
-    // {
-    //   $project: {
-    //     title: 1,
-    //     description: 1,
-    //     author: {
-    //       username: 1,
-    //     },
-    //     genres: {
-    //       name: 1,
-    //     },
-    //   },
-    // },
-    // );
-
+    
     res.status(200).json({ message: `Books Found:`, data: books });
   } catch (error) {
-    res.status(500).send("Server error" + error);
+    res.status(500).json({ message: "Server error" + error });
   }
 };

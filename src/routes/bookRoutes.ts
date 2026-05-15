@@ -1,13 +1,11 @@
-import { createBook, deleteBookById, findBookByNames, getBooks } from '@/controllers/bookController'
-import { isAuthor } from '@/middlewares/author';
+import { createBook, deleteBookById, getBookById } from '@/controllers/bookController'
 import { Router } from 'express'
 
 const router = Router()
 
 router.post("/", createBook);
-router.get("/", getBooks);
-router.get("/search", findBookByNames);
-router.delete("/:id", isAuthor, deleteBookById);
+router.get("/:id", getBookById);
+router.delete("/:id", deleteBookById);
 
 
 export default router

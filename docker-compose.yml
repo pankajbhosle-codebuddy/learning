@@ -1,39 +1,38 @@
-  services:
-    mongo:
-      image: mongo:7
-      container_name: mongo
-      hostname: mongo
-      ports:
-        - "27017:27017"
-      command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
-      healthcheck:
-        test: >
-          mongosh --eval "
-          try {
-            rs.status()
-          } catch (e) {
-            rs.initiate({
-              _id: 'rs0',
-              members: [{ _id: 0, host: 'mongo:27017' }]
-            })
-          }"
-        interval: 5s
-        timeout: 30s
-        retries: 30
+services:
+  app:
+    build: .
+    ports:
+      - "7777:7777"
 
-    app:
-      build: .
-      container_name: app
-      ports:
-        - "4000:4000"
-      depends_on:
-        mongo:
-          condition: service_healthy
-      environment:
-        DATABASE_URL: mongodb://mongo:27017/test?replicaSet=rs0
-      volumes:
-        - .:/app
-        - /app/node_modules
-      command: npm run dev
-  volumes:
-    mongo-data:
+    depends_on:
+      - mongo
+
+    environment:
+      PORT: 7777
+      MONGO_URI: mongodb://appuser:password123@mongo:27017/mydb?authSource=mydb
+      JWT_SECRET: codebuddy
+      JWT_EXPIRES_IN: "60"
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: pnpm dev
+
+  mongo:
+    image: mongo
+
+    ports:
+      - "27017:27017"
+
+    command: ["mongod", "--auth", "--bind_ip_all"]
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+volumes:
+  mongo-data:
