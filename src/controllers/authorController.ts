@@ -40,6 +40,7 @@ export const getBooksByAuthor = async (req: Request, res: Response) => {
       },
 
       select: {
+        id:true,
         title: true,
         description: true,
 
@@ -56,6 +57,10 @@ export const getBooksByAuthor = async (req: Request, res: Response) => {
         },
       },
     });
+
+    if (books.length === 0) {
+      return res.status(404).json({ message: "No books found for this author" });
+    }
     
     res.status(200).json({ message: `Books Found:`, data: books });
   } catch (error) {

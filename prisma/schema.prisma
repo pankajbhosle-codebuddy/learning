@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url= env("MONGO_URI")
+  url= env("DATABASE_URL")
 }
 
 model books {
@@ -15,7 +15,7 @@ model books {
   description String
 
   authorId    String   @db.ObjectId
-  author      users    @relation(fields: [authorId], references: [id])
+  author      author    @relation(fields: [authorId], references: [id])
 
   genreIds    String[] @db.ObjectId
   genres      genres[] @relation(fields: [genreIds], references: [id])
@@ -41,35 +41,16 @@ model genres {
   @@map("genres")
 }
 
-model tokens {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  v         Int      @map("__v") @default(0)
-
-  token     String
-  expiresIn DateTime @db.Date
-
-  userId    String   @db.ObjectId
-  user      users    @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @db.Date @default(now())
-  updatedAt DateTime @db.Date @updatedAt
-
-  @@map("tokens")
-}
-
-model users {
+model author {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   v         Int      @map("__v") @default(0)
 
   username  String   @unique
-  password  String
-  isAuthor  Boolean  @default(false)
 
   books     books[]
-  tokens    tokens[]
 
   createdAt DateTime @db.Date @default(now())
   updatedAt DateTime @db.Date @updatedAt
 
-  @@map("users")
+  @@map("author")
 }

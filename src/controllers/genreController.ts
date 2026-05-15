@@ -50,6 +50,11 @@ export const getBooksByGenre = async (req: Request, res: Response) => {
         },
       },
     });
+
+    if (books.length === 0) {
+      return res.status(404).json({ message: "No books found for this genre" });
+    }
+
     res
       .status(200)
       .json({ message: `Books Found: ${books.length}`, data: books });

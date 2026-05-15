@@ -1,0 +1,9 @@
+FROM mongo:8
+
+RUN mkdir -p /data/keyfile
+
+COPY entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

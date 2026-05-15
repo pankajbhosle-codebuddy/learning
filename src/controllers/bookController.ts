@@ -3,7 +3,11 @@ import { Request, Response } from "express";
 
 export const getBookById = async (req: Request, res: Response) => {
   try {
-    const books = await prisma.books.findMany({
+    const id = req.params.id as string;
+    const books = await prisma.books.findUnique({
+      where: {
+        id,
+      },
       select: {
         id: true,
         title: true,
@@ -13,18 +17,31 @@ export const getBookById = async (req: Request, res: Response) => {
         author: {
           select: {
             username: true,
+            _count: {
+              select: {
+                books: true,
+              },
+            },
           },
         },
 
         genres: {
           select: {
             name: true,
+            _count: {
+              select: {
+                books: true,
+              },
+            },
           },
-          genreBookCount: 1,
         },
       },
     });
-    
+
+    if (!books) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
     res.status(200).json({ message: `Books Found:`, data: books });
   } catch (error) {
     res.status(500).json({ message: "Server error" + error });
@@ -33,8 +50,12 @@ export const getBookById = async (req: Request, res: Response) => {
 
 export const createBook = async (req: Request, res: Response) => {
   try {
-
-    if (!req.body.title || !req.body.genres || !req.body.description || !req.body.authorId) {
+    if (
+      !req.body.title ||
+      !req.body.genres ||
+      !req.body.description ||
+      !req.body.author
+    ) {
       return res.status(400).send("Required Details Missing");
     }
 
@@ -45,7 +66,7 @@ export const createBook = async (req: Request, res: Response) => {
 
         author: {
           connect: {
-            id: req.body.authorId,
+            id: req.body.author,
           },
         },
 
@@ -89,4 +110,3 @@ export const deleteBookById = async (req: Request, res: Response) => {
     res.status(500).send("Server error");
   }
 };
-

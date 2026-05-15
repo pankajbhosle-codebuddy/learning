@@ -1,17 +1,19 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        DATABASE_URL: mongodb://appuser:password123@mongo:27017/mydb?authSource=mydb&replicaSet=rs0
     ports:
       - "7777:7777"
 
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
     environment:
       PORT: 7777
-      MONGO_URI: mongodb://appuser:password123@mongo:27017/mydb?authSource=mydb
-      JWT_SECRET: codebuddy
-      JWT_EXPIRES_IN: "60"
+      DATABASE_URL: mongodb://appuser:password123@mongo:27017/mydb?authSource=mydb&replicaSet=rs0
 
     volumes:
       - .:/app
@@ -21,10 +23,13 @@ services:
   mongo:
     image: mongo
 
+    build:
+      context: ./docker/mongo
+
     ports:
       - "27017:27017"
 
-    command: ["mongod", "--auth", "--bind_ip_all"]
+    command: ["mongod", "--auth", "--bind_ip_all", "--replSet", "rs0"]
 
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
@@ -33,6 +38,13 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+    healthcheck:
+      test: >
+        mongosh --username admin --password admin123 --authenticationDatabase admin --eval "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}) }"
+      interval: 5s
+      timeout: 30s
+      retries: 30
 
 volumes:
   mongo-data:
