@@ -4,7 +4,6 @@ import authorRoutes from "@/routes/authorRoutes";
 import genreRoutes from "@/routes/genreRoutes";
 import bookRoutes from "@/routes/bookRoutes";
 import mongoose from "mongoose";
-import helloRoutes from "./routes/helloRoutes";
 
 dotenv.config();
 
@@ -14,7 +13,6 @@ const PORT: number = Number(process.env.PORT) || 7777;
 
 app.use(express.json());
 
-app.use("/hello", helloRoutes);
 
 app.use("/api/author", authorRoutes);
 app.use("/api/genre",  genreRoutes);

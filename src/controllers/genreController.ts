@@ -12,7 +12,7 @@ export const createGenre = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Genre Already Exists!" });
     }
     const genres = await Genre.create({ name: req.body.name });
-    res.status(200).json({ message: `Genre Created: ${genres}` });
+    res.status(200).json({ message: `Genre Created: `, data: genres });
   } catch (error) {
     res.status(500).json({ message: "Server error" + error });
   }

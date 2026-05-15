@@ -105,7 +105,7 @@ export const createBook = async (req: Request, res: Response) => {
       { _id: req.body.author },
       { $push: { books: books._id } }
     );
-    res.status(200).json({ message: `Book Created: ${books}` });
+    res.status(200).json({ message: `Book Created: `, data: books });
   } catch (error) {
     res.status(500).json({ message: "Server error" + error });
   }
