@@ -72,7 +72,6 @@ export const getBookById = async (req: Request, res: Response) => {
             username: 1,
           },
           authorBookCount: 1,
-          // authorBooks: 1,
           genres: {
             name: 1,
           },
@@ -82,7 +81,7 @@ export const getBookById = async (req: Request, res: Response) => {
     ]);
     res.status(200).json({ message: `Books Found:`, data: books });
   } catch (error) {
-    res.status(500).send("Server error" + error);
+    res.status(500).json({ message: "Server error" + error });
   }
 };
 
@@ -90,7 +89,7 @@ export const createBook = async (req: Request, res: Response) => {
   try {
 
     if (!req.body.title || !req.body.genres || !req.body.description || !req.body.author) {
-      return res.status(400).send("Required Details Missing");
+      return res.status(400).json({ message: "Required Details Missing" });
     }
     const books = await Book.create({
       title: req.body.title,
@@ -106,96 +105,24 @@ export const createBook = async (req: Request, res: Response) => {
       { _id: req.body.author },
       { $push: { books: books._id } }
     );
-    res.status(200).send(`Book Created: ${books}`);
+    res.status(200).json({ message: `Book Created: ${books}` });
   } catch (error) {
-    res.status(500).send("Server error");
+    res.status(500).json({ message: "Server error" + error });
   }
 };
 
 export const deleteBookById = async (req: Request, res: Response) => {
   try {
-    // const currUser = req.user;
     console.log("req.params.id", req.params.id);
     const book = await Book.findById(req.params.id);
     if (!book) {
-      return res.status(404).send("Book not found");
+      return res.status(404).json({ message: "Book not found" });
     }
 
-    // if (book.author.toString() !== currUser._id.toString()) {
-    //   return res.status(403).send("You are not the owner of this book");
-    // }
+
     await Book.findByIdAndDelete(req.params.id);
-    res.status(200).send(`Book Deleted: ${book.title}`);
+    res.status(200).json({ message: `Book Deleted: ${book.title}` });
   } catch (error) {
-    res.status(500).send("Server error");
+    res.status(500).json({ message: "Server error" + error });
   }
 };
-
-// export const findBookByNames = async (req: Request, res: Response) => {
-//   try {
-//     const authorName = req.query.author as string;
-//     const genreName = req.query.genre as string;
-//     let whereClause: any = {};
-
-//     if (authorName && genreName) {
-//       whereClause = {
-//         $and: [{ "author.username": authorName }, { "genres.name": genreName }],
-//       };
-//     } else if (authorName || genreName) {
-//       whereClause = {
-//         $or: [{ "author.username": authorName }, { "genres.name": genreName }],
-//       };
-//     }
-
-//     const book = await Book.aggregate([
-//       {
-//         $lookup: {
-//           from: "users",
-//           localField: "author",
-//           foreignField: "_id",
-//           as: "author",
-//         },
-//       },
-//       { $unwind: "$author" },
-//       {
-//         $lookup: {
-//           from: "genres",
-//           localField: "genres",
-//           foreignField: "_id",
-//           as: "genres",
-//         },
-//       },
-
-//       {
-//         $facet: {
-//           totalBooks: [{ $count: "count" }],
-//           books: [
-//             {
-//               $match: whereClause,
-//             },
-//             {
-//               $project: {
-//                 title: 1,
-//                 description: 1,
-//                 author: {
-//                   username: 1,
-//                 },
-//                 genres: {
-//                   name: 1,
-//                 },
-//               },
-//             },
-//           ],
-//         },
-//       },
-//     ]);
-
-//     if (!book.length) {
-//       return res.status(404).send("Book not found");
-//     }
-
-//     res.status(200).json({ message: `Book Found:`, data: book });
-//   } catch (error) {
-//     res.status(500).send("Server error");
-//   }
-// };

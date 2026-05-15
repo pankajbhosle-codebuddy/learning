@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import Author from "@/models/author";
-import mongoose, { isValidObjectId } from "mongoose";
-import books from "@/models/books";
+import mongoose from "mongoose";
 import author from "@/models/author";
 
 export const createAuthor = async (req: Request, res: Response) => {
@@ -9,16 +8,16 @@ export const createAuthor = async (req: Request, res: Response) => {
 
 
   if (await Author.findOne({ username })) {
-    return res.status(400).send("Username already exists");
+    return res.status(400).json({ message: "Username already exists" });
   }
   if (!username ) {
-    return res.status(400).send("Required Details Missing");
+    return res.status(400).json({ message: "Required Details Missing" });
   }
   try {
     const author = await Author.create({ username});
-    res.status(201).send(`Author created: ${author._id}`);
+    res.status(201).json({ message: `Author created: ${author._id}` });
   } catch (err) {
-    res.status(500).send("Error creating author: " + err);
+    res.status(500).json({ message: "Error creating author: " + err });
   }
 };
 
@@ -42,6 +41,6 @@ export const getBooksByAuthor = async (req: Request, res: Response) => {
 
     res.status(200).json({ message: `Books Found:`, data: AllBooks });
   } catch (error) {
-    res.status(500).send("Server error" + error);
+    res.status(500).json({ message: "Server error" + error });
   }
 };

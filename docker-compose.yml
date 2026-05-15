@@ -9,7 +9,7 @@ services:
 
     environment:
       PORT: 7777
-      MONGO_URI: mongodb://appuser:password123@mongo:27017/test?authSource=test
+      MONGO_URI: mongodb://appuser:password123@mongo:27017/mydb?authSource=mydb
       JWT_SECRET: codebuddy
       JWT_EXPIRES_IN: "60"
 
@@ -32,6 +32,7 @@ services:
 
     volumes:
       - mongo-data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
 volumes:
   mongo-data:
